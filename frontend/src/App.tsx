@@ -129,15 +129,19 @@ function App() {
             <p className="text-sm text-muted-foreground">
               Jobs are matched and run automatically — solo on ungrouped machines, redundantly verified within co-op groups.
             </p>
-            <SubmitJobDialog
-              templates={templateList}
-              onSubmitted={() => {}}
-              trigger={
-                <Button size="sm">
-                  <Plus /> Submit job
-                </Button>
-              }
-            />
+            {user ? (
+              <SubmitJobDialog
+                templates={templateList}
+                onSubmitted={() => {}}
+                trigger={
+                  <Button size="sm">
+                    <Plus /> Submit job
+                  </Button>
+                }
+              />
+            ) : (
+              <AuthDialog trigger={<Button size="sm">Log in to submit a job</Button>} />
+            )}
           </div>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {jobList.map((j) => (

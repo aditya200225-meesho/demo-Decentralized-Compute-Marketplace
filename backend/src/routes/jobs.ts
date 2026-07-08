@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db.ts";
 import { uploadInputObject } from "../services/storage.ts";
-import { optionalAuth } from "../middleware/auth.ts";
+import { requireAuth } from "../middleware/auth.ts";
 
 export const jobsRouter = Router();
 
@@ -31,7 +31,7 @@ jobsRouter.get("/jobs/:id", async (req, res) => {
   res.json(job);
 });
 
-jobsRouter.post("/jobs", optionalAuth, async (req, res) => {
+jobsRouter.post("/jobs", requireAuth, async (req, res) => {
   const { requesterName, templateId, chunkCount, reliabilityMin } = req.body ?? {};
   if (!requesterName) return res.status(400).json({ error: "requesterName is required" });
   if (!templateId) return res.status(400).json({ error: "templateId is required" });
@@ -43,7 +43,7 @@ jobsRouter.post("/jobs", optionalAuth, async (req, res) => {
   const job = await prisma.job.create({
     data: {
       requesterName,
-      requesterId: req.user?.id ?? null,
+      requesterId: req.user!.id,
       templateId: template.id,
       taskType: template.taskType,
       minCpuCores: template.minCpuCores,

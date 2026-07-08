@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import type { JobTemplate } from "@/lib/types";
 
 export function SubmitJobDialog({
@@ -24,8 +25,9 @@ export function SubmitJobDialog({
   onSubmitted: () => void;
   trigger: React.ReactNode;
 }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [requesterName, setRequesterName] = useState("");
+  const [requesterName, setRequesterName] = useState(user?.username ?? "");
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
   const [chunkCount, setChunkCount] = useState("1");
   const [submitting, setSubmitting] = useState(false);
