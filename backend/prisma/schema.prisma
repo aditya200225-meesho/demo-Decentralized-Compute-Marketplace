@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum ProviderStatus {
+  ONLINE
+  IDLE
+  BUSY
+  OFFLINE
+}
+
+enum JobStatus {
+  PENDING
+  MATCHED
+  RUNNING
+  VERIFYING
+  VERIFIED
+  DISPUTED
+  PAID
+  FAILED
+}
+
+enum ChunkStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum LedgerType {
+  ESCROW_HOLD
+  ESCROW_RELEASE
+  ESCROW_REFUND
+  EARNING
+  PAYOUT
+}
+
+model Team {
+  id        String     @id @default(cuid())
+  name      String
+  createdAt DateTime   @default(now())
+  providers Provider[]
+}
+
+model Provider {
+  id                String         @id @default(cuid())
+  name              String
+  cpuCores          Int
+  ramGb             Int
+  hasGpu            Boolean        @default(false)
+  gpuModel          String?
+  status            ProviderStatus @default(OFFLINE)
+  reliabilityScore  Float          @default(1)
+  jobsCompleted     Int            @default(0)
+  jobsFailed        Int            @default(0)
+  creditBalance     Float          @default(0)
+  isVirtual         Boolean        @default(true)
+  batteryPct        Int            @default(100)
+  isOnWifi          Boolean        @default(true)
+  isCharging        Boolean        @default(true)
+  cpuTempC          Int            @default(45)
+  teamId            String?
+  team              Team?          @relation(fields: [teamId], references: [id])
+  createdAt         DateTime       @default(now())
+  chunks            JobChunk[]     @relation(name: "PrimaryProvider")
+  shadowChunks      JobChunk[]     @relation(name: "ShadowProvider")
+  ledgerEntries     LedgerEntry[]
+}
+
+model JobTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  description   String
+  taskType      String
+  minCpuCores   Int      @default(1)
+  minRamGb      Int      @default(1)
+  requiresGpu   Boolean  @default(false)
+  basePrice     Float
+  estCarbonG    Float    @default(10)
+  privacyMode   Boolean  @default(true)
+  jobs          Job[]
+}
+
+model Job {
+  id             String      @id @default(cuid())
+  requesterName  String
+  templateId     String?
+  template       JobTemplate? @relation(fields: [templateId], references: [id])
+  taskType       String
+  status         JobStatus   @default(PENDING)
+  chunkCount     Int         @default(1)
+  minCpuCores    Int         @default(1)
+  minRamGb       Int         @default(1)
+  requiresGpu    Boolean     @default(false)
+  privacyMode    Boolean     @default(true)
+  price          Float
+  reliabilityMin Float       @default(0)
+  disputeReason  String?
+  createdAt      DateTime    @default(now())
+  matchedAt      DateTime?
+  completedAt    DateTime?
+  chunks         JobChunk[]
+  ledgerEntries  LedgerEntry[]
+}
+
+model JobChunk {
+  id                String      @id @default(cuid())
+  jobId             String
+  job               Job         @relation(fields: [jobId], references: [id])
+  index             Int
+  providerId        String?
+  provider          Provider?   @relation(fields: [providerId], references: [id], name: "PrimaryProvider")
+  shadowProviderId  String?
+  shadowProvider    Provider?   @relation(fields: [shadowProviderId], references: [id], name: "ShadowProvider")
+  status            ChunkStatus @default(PENDING)
+  progress          Int         @default(0)
+  outputHash        String?
+  shadowHash        String?
+  verified          Boolean     @default(false)
+  startedAt         DateTime?
+  completedAt       DateTime?
+}
+
+model LedgerEntry {
+  id         String     @id @default(cuid())
+  providerId String?
+  provider   Provider?  @relation(fields: [providerId], references: [id])
+  jobId      String?
+  job        Job?       @relation(fields: [jobId], references: [id])
+  type       LedgerType
+  amount     Float
+  note       String?
+  createdAt  DateTime   @default(now())
+}

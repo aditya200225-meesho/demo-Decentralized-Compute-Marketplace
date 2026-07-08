@@ -1,0 +1,23 @@
+{
+  "project_name": "decentralized-compute-marketplace",
+  "app_idea": "Idle Compute Co-op: rent idle CPU-only laptops/desktops for small AI jobs (embeddings, inference, preprocessing, tiny fine-tunes), matched by hardware spec and priced fairly by a verified reliability score, with simulated crypto settlement (credit ledger) and redundant-verification trust.",
+  "frontend_port": 9080,
+  "backend_port": 8090,
+  "frontend_framework": "React + Vite + TypeScript + shadcn/ui (Tailwind v4)",
+  "backend_language": "Node.js + Express + TypeScript (ESM, run via tsx)",
+  "database": "SQLite via Prisma (driver adapter @prisma/adapter-better-sqlite3)",
+  "participant_email": "aditya.nagalwade@meesho.com",
+  "team_id": null,
+  "image_tag": null,
+  "registry_url": null,
+  "registry_proxy_host": null,
+  "registry_login_user": null,
+  "last_pushed_image": null,
+  "last_pushed_tag": null,
+  "code_zip": null,
+  "last_successful_step": "Dockerfile, nginx config, and entrypoint.sh written; Docker build/run NOT yet verified (Docker Desktop not installed on this machine)",
+  "current_status": "Full app built and verified locally via npm dev servers end-to-end (backend API + scheduler simulation + frontend UI + /api proxy). Docker image untested.",
+  "current_blocker": "Docker Desktop is not installed on this machine, so `docker build`/`docker run` for the single final image has not been verified.",
+  "next_action": "Install Docker Desktop (winget install -e --id Docker.DockerDesktop --source winget), then run: docker build -t hackathon-app:local . && mkdir -p data && docker run --rm -p 9080:9080 -p 8090:8090 -v \"$(pwd)/data:/app/data\" hackathon-app:local — then verify http://localhost:9080 and http://localhost:9080/api/health.",
+  "last_updated": "2026-07-08"
+}

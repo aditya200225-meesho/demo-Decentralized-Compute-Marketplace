@@ -1,0 +1,21 @@
+node_modules/
+dist/
+build/
+
+# env
+.env
+.env.*
+!.env.example
+
+# sqlite runtime data (bind-mounted, not committed)
+data/
+*.db
+*.db-journal
+
+# prisma generated client (regenerated via `prisma generate`)
+backend/src/generated/
+
+# misc
+.DS_Store
+*.log
+tsconfig.tsbuildinfo
