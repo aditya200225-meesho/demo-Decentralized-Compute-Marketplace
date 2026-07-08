@@ -2,12 +2,21 @@
 
 ## Current blocker
 
-Docker Desktop is not installed on this machine (`docker --version` fails, winget install was attempted but not completed — user opted to continue without Docker for now). The Dockerfile/nginx/entrypoint are written but **never built or run**.
+Docker Desktop 4.81.0 IS installed (per-user, at `%LOCALAPPDATA%\Programs\DockerDesktop`, CLI at
+`resources\bin\docker.exe`) and its process is running, but its engine fails to start:
+`ERROR: Error response from daemon: Docker Desktop is unable to start`. Root cause: WSL2 is not
+installed (`wsl --status` → "The Windows Subsystem for Linux is not installed"). Installing WSL2
+requires admin rights, which this agent's shell does not have — the user is installing it manually.
+
+User is running, in an elevated (Administrator) PowerShell: `wsl --install`, then restarting Windows.
 
 ## Next exact action
 
-1. Install Docker Desktop: `winget install -e --id Docker.DockerDesktop --source winget --accept-package-agreements --accept-source-agreements` (needs admin + likely a restart, enables WSL2 if not already on).
-2. From the project root (`D:\decentralized-compute-marketplace`):
+1. Confirm with the user that they've run `wsl --install` as Administrator and restarted Windows.
+2. Verify: `& "$env:LOCALAPPDATA\Programs\DockerDesktop\resources\bin\docker.exe" info` should succeed
+   (no "unable to start" error). Docker Desktop autostarts on login, so `docker` should also work
+   directly once a fresh shell picks up the updated PATH.
+3. From the project root (`D:\decentralized-compute-marketplace`):
    ```
    docker build -t hackathon-app:local .
    mkdir -p data

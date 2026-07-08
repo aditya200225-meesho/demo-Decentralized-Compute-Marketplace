@@ -9,7 +9,16 @@ export function payoutShare(job: Pick<Job, "price" | "chunkCount">, provider: Pi
   return Number((perChunk * reliabilityMultiplier).toFixed(4));
 }
 
-function isEligible(job: Pick<Job, "minCpuCores" | "minRamGb" | "requiresGpu" | "reliabilityMin">, provider: Provider) {
+/** Shadow/verifier providers do a full redundant run too, so they earn a reduced verification
+ *  fee (half the primary rate) whenever their result contributes to a verified payout. */
+export function verifierPayoutShare(job: Pick<Job, "price" | "chunkCount">, provider: Pick<Provider, "reliabilityScore">) {
+  return Number((payoutShare(job, provider) * 0.5).toFixed(4));
+}
+
+function isEligible(
+  job: Pick<Job, "minCpuCores" | "minRamGb" | "requiresGpu" | "reliabilityMin" | "requesterId">,
+  provider: Provider
+) {
   if (provider.status !== "ONLINE" && provider.status !== "IDLE") return false;
   if (provider.cpuCores < job.minCpuCores) return false;
   if (provider.ramGb < job.minRamGb) return false;
@@ -18,12 +27,14 @@ function isEligible(job: Pick<Job, "minCpuCores" | "minRamGb" | "requiresGpu" | 
   // Idle-time-aware scheduling: only take jobs when genuinely idle (plugged in, on wifi).
   if (!provider.isCharging || !provider.isOnWifi) return false;
   if (provider.cpuTempC > 85) return false;
+  // Can't rent your own machine — same rule as hiding it from the public listing.
+  if (job.requesterId && provider.ownerId && provider.ownerId === job.requesterId) return false;
   return true;
 }
 
 /** Finds `count` distinct idle providers eligible for a job, best reliability first. */
 export async function findEligibleProviders(
-  job: Pick<Job, "minCpuCores" | "minRamGb" | "requiresGpu" | "reliabilityMin">,
+  job: Pick<Job, "minCpuCores" | "minRamGb" | "requiresGpu" | "reliabilityMin" | "requesterId">,
   count: number,
   excludeIds: string[] = []
 ) {

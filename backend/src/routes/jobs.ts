@@ -1,12 +1,17 @@
 import { Router } from "express";
 import { prisma } from "../db.ts";
+import { uploadInputObject } from "../services/storage.ts";
+import { optionalAuth } from "../middleware/auth.ts";
 
 export const jobsRouter = Router();
 
 jobsRouter.get("/jobs", async (_req, res) => {
   const jobs = await prisma.job.findMany({
     orderBy: { createdAt: "desc" },
-    include: { chunks: true, template: true },
+    include: {
+      chunks: { include: { provider: true, shadowProvider: true }, orderBy: { index: "asc" } },
+      template: true,
+    },
     take: 100,
   });
   res.json(jobs);
@@ -19,13 +24,14 @@ jobsRouter.get("/jobs/:id", async (req, res) => {
       template: true,
       chunks: { include: { provider: true, shadowProvider: true }, orderBy: { index: "asc" } },
       ledgerEntries: { orderBy: { createdAt: "desc" } },
+      storageObjects: { include: { uploadedByProvider: true }, orderBy: { createdAt: "asc" } },
     },
   });
   if (!job) return res.status(404).json({ error: "not found" });
   res.json(job);
 });
 
-jobsRouter.post("/jobs", async (req, res) => {
+jobsRouter.post("/jobs", optionalAuth, async (req, res) => {
   const { requesterName, templateId, chunkCount, reliabilityMin } = req.body ?? {};
   if (!requesterName) return res.status(400).json({ error: "requesterName is required" });
   if (!templateId) return res.status(400).json({ error: "templateId is required" });
@@ -37,6 +43,7 @@ jobsRouter.post("/jobs", async (req, res) => {
   const job = await prisma.job.create({
     data: {
       requesterName,
+      requesterId: req.user?.id ?? null,
       templateId: template.id,
       taskType: template.taskType,
       minCpuCores: template.minCpuCores,
@@ -53,6 +60,8 @@ jobsRouter.post("/jobs", async (req, res) => {
     },
     include: { chunks: true, template: true },
   });
+
+  await uploadInputObject(job);
 
   res.status(201).json(job);
 });

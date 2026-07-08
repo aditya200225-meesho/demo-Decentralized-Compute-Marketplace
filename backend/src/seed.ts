@@ -1,5 +1,6 @@
 import { prisma } from "./db.ts";
 import { randomVirtualSpecs } from "./services/hardware.ts";
+import { generateMachineCode } from "./services/ids.ts";
 
 const TEMPLATES = [
   {
@@ -64,9 +65,9 @@ export async function seedIfEmpty() {
 
   const providerCount = await prisma.provider.count();
   if (providerCount === 0) {
-    const team = await prisma.team.create({ data: { name: "Hostel Wing-C Co-op" } });
     for (let i = 0; i < VIRTUAL_PROVIDER_NAMES.length; i++) {
       const specs = randomVirtualSpecs(i);
+      const machineCode = await generateMachineCode();
       await prisma.provider.create({
         data: {
           name: VIRTUAL_PROVIDER_NAMES[i],
@@ -76,10 +77,10 @@ export async function seedIfEmpty() {
           gpuModel: specs.gpuModel,
           status: "ONLINE",
           isVirtual: true,
-          teamId: i < 3 ? team.id : null,
+          machineCode,
         },
       });
     }
-    console.log(`[seed] created ${VIRTUAL_PROVIDER_NAMES.length} virtual providers`);
+    console.log(`[seed] created ${VIRTUAL_PROVIDER_NAMES.length} virtual providers (ungrouped, run jobs solo)`);
   }
 }

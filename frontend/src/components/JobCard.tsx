@@ -1,17 +1,21 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { JobStatusBadge } from "@/components/StatusBadge";
 import { ShieldCheck, ShieldAlert, Lock, Users } from "lucide-react";
 import type { Job } from "@/lib/types";
 
-export function JobCard({ job }: { job: Job }) {
+export function JobCard({ job, onClick }: { job: Job; onClick?: () => void }) {
   const overallProgress =
     job.chunks.length === 0
       ? 0
       : Math.round(job.chunks.reduce((sum, c) => sum + c.progress, 0) / job.chunks.length);
 
   return (
-    <Card>
+    <Card
+      className={onClick ? "cursor-pointer transition-colors hover:bg-muted/50" : undefined}
+      onClick={onClick}
+    >
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -43,8 +47,11 @@ export function JobCard({ job }: { job: Job }) {
         <div className="flex flex-col gap-1.5">
           {job.chunks.map((chunk) => (
             <div key={chunk.id} className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-muted-foreground">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
                 chunk {chunk.index + 1} · {chunk.provider?.name ?? "unassigned"}
+                <Badge variant="outline" className="text-[10px]">
+                  {chunk.shadowProviderId ? "co-op verified" : "solo"}
+                </Badge>
               </span>
               <div className="flex items-center gap-2">
                 <span>{chunk.progress}%</span>

@@ -4,9 +4,12 @@ import { ProviderStatusBadge } from "@/components/StatusBadge";
 import { Cpu, MemoryStick, Zap, Wifi, WifiOff, BatteryCharging, Battery, Thermometer, Users } from "lucide-react";
 import type { Provider } from "@/lib/types";
 
-export function ProviderCard({ provider }: { provider: Provider }) {
+export function ProviderCard({ provider, onClick }: { provider: Provider; onClick?: () => void }) {
   return (
-    <Card>
+    <Card
+      className={onClick ? "cursor-pointer transition-colors hover:bg-muted/50" : undefined}
+      onClick={onClick}
+    >
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base">{provider.name}</CardTitle>
@@ -39,9 +42,9 @@ export function ProviderCard({ provider }: { provider: Provider }) {
           <span className="flex items-center gap-1">
             <Thermometer className="size-3.5" /> {provider.cpuTempC}°C
           </span>
-          {provider.team && (
+          {provider.group && (
             <span className="flex items-center gap-1">
-              <Users className="size-3.5" /> {provider.team.name}
+              <Users className="size-3.5" /> {provider.group.name}
             </span>
           )}
         </div>

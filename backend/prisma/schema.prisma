@@ -40,90 +40,159 @@ enum LedgerType {
   PAYOUT
 }
 
-model Team {
-  id        String     @id @default(cuid())
-  name      String
-  createdAt DateTime   @default(now())
-  providers Provider[]
+enum GroupVisibility {
+  OPEN
+  INVITE_ONLY
 }
 
-model Provider {
-  id                String         @id @default(cuid())
-  name              String
-  cpuCores          Int
-  ramGb             Int
-  hasGpu            Boolean        @default(false)
-  gpuModel          String?
-  status            ProviderStatus @default(OFFLINE)
-  reliabilityScore  Float          @default(1)
-  jobsCompleted     Int            @default(0)
-  jobsFailed        Int            @default(0)
-  creditBalance     Float          @default(0)
-  isVirtual         Boolean        @default(true)
-  batteryPct        Int            @default(100)
-  isOnWifi          Boolean        @default(true)
-  isCharging        Boolean        @default(true)
-  cpuTempC          Int            @default(45)
-  teamId            String?
-  team              Team?          @relation(fields: [teamId], references: [id])
-  createdAt         DateTime       @default(now())
-  chunks            JobChunk[]     @relation(name: "PrimaryProvider")
-  shadowChunks      JobChunk[]     @relation(name: "ShadowProvider")
-  ledgerEntries     LedgerEntry[]
+enum GroupRole {
+  ADMIN
+  MODERATOR
+  MEMBER
 }
 
-model JobTemplate {
-  id            String   @id @default(cuid())
-  name          String
-  description   String
-  taskType      String
-  minCpuCores   Int      @default(1)
-  minRamGb      Int      @default(1)
-  requiresGpu   Boolean  @default(false)
-  basePrice     Float
-  estCarbonG    Float    @default(10)
-  privacyMode   Boolean  @default(true)
+enum MembershipStatus {
+  ACTIVE
+  LEFT
+  REMOVED
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum StorageObjectKind {
+  INPUT
+  OUTPUT
+}
+
+model User {
+  id            String         @id @default(cuid())
+  username      String         @unique
+  passwordHash  String
+  createdAt     DateTime       @default(now())
+  providers     Provider[]
+  sessions      Session[]
+  notifications Notification[]
   jobs          Job[]
 }
 
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+model Provider {
+  id                String            @id @default(cuid())
+  name              String
+  cpuCores          Int
+  ramGb             Int
+  hasGpu            Boolean           @default(false)
+  gpuModel          String?
+  status            ProviderStatus    @default(OFFLINE)
+  reliabilityScore  Float             @default(1)
+  jobsCompleted     Int               @default(0)
+  jobsFailed        Int               @default(0)
+  creditBalance     Float             @default(0)
+  isVirtual         Boolean           @default(true)
+  batteryPct        Int               @default(100)
+  isOnWifi          Boolean           @default(true)
+  isCharging        Boolean           @default(true)
+  cpuTempC          Int               @default(45)
+  onlineTicks       Int               @default(0)
+  totalTicks        Int               @default(0)
+  machineCode       String            @unique
+  ownerId           String?
+  owner             User?             @relation(fields: [ownerId], references: [id])
+  groupId           String?
+  group             CoopGroup?        @relation(fields: [groupId], references: [id])
+  groupRole         GroupRole?
+  createdAt         DateTime          @default(now())
+  chunks            JobChunk[]        @relation(name: "PrimaryProvider")
+  shadowChunks      JobChunk[]        @relation(name: "ShadowProvider")
+  ledgerEntries     LedgerEntry[]
+  memberships       GroupMembership[]
+  invites           GroupInvite[]     @relation(name: "InvitedProvider")
+  uploadedObjects   StorageObject[]
+}
+
+model JobTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  taskType    String
+  minCpuCores Int      @default(1)
+  minRamGb    Int      @default(1)
+  requiresGpu Boolean  @default(false)
+  basePrice   Float
+  estCarbonG  Float    @default(10)
+  privacyMode Boolean  @default(true)
+  jobs        Job[]
+}
+
 model Job {
-  id             String      @id @default(cuid())
+  id             String        @id @default(cuid())
   requesterName  String
+  requesterId    String?
+  requester      User?         @relation(fields: [requesterId], references: [id])
   templateId     String?
-  template       JobTemplate? @relation(fields: [templateId], references: [id])
+  template       JobTemplate?  @relation(fields: [templateId], references: [id])
   taskType       String
-  status         JobStatus   @default(PENDING)
-  chunkCount     Int         @default(1)
-  minCpuCores    Int         @default(1)
-  minRamGb       Int         @default(1)
-  requiresGpu    Boolean     @default(false)
-  privacyMode    Boolean     @default(true)
+  status         JobStatus     @default(PENDING)
+  chunkCount     Int           @default(1)
+  minCpuCores    Int           @default(1)
+  minRamGb       Int           @default(1)
+  requiresGpu    Boolean       @default(false)
+  privacyMode    Boolean       @default(true)
   price          Float
-  reliabilityMin Float       @default(0)
+  reliabilityMin Float         @default(0)
   disputeReason  String?
-  createdAt      DateTime    @default(now())
+  createdAt      DateTime      @default(now())
   matchedAt      DateTime?
   completedAt    DateTime?
   chunks         JobChunk[]
   ledgerEntries  LedgerEntry[]
+  storageObjects StorageObject[]
 }
 
 model JobChunk {
-  id                String      @id @default(cuid())
-  jobId             String
-  job               Job         @relation(fields: [jobId], references: [id])
-  index             Int
-  providerId        String?
-  provider          Provider?   @relation(fields: [providerId], references: [id], name: "PrimaryProvider")
-  shadowProviderId  String?
-  shadowProvider    Provider?   @relation(fields: [shadowProviderId], references: [id], name: "ShadowProvider")
-  status            ChunkStatus @default(PENDING)
-  progress          Int         @default(0)
-  outputHash        String?
-  shadowHash        String?
-  verified          Boolean     @default(false)
-  startedAt         DateTime?
-  completedAt       DateTime?
+  id               String      @id @default(cuid())
+  jobId            String
+  job              Job         @relation(fields: [jobId], references: [id])
+  index            Int
+  providerId       String?
+  provider         Provider?   @relation(fields: [providerId], references: [id], name: "PrimaryProvider")
+  shadowProviderId String?
+  shadowProvider   Provider?   @relation(fields: [shadowProviderId], references: [id], name: "ShadowProvider")
+  status           ChunkStatus @default(PENDING)
+  progress         Int         @default(0)
+  outputHash       String?
+  shadowHash       String?
+  verified         Boolean     @default(false)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  storageObjects   StorageObject[]
+}
+
+model StorageObject {
+  id                   String            @id @default(cuid())
+  jobId                String
+  job                  Job               @relation(fields: [jobId], references: [id])
+  chunkId              String?
+  chunk                JobChunk?         @relation(fields: [chunkId], references: [id])
+  key                  String            @unique
+  kind                 StorageObjectKind
+  sizeBytes            Int
+  contentHash          String
+  uploadedByProviderId String?
+  uploadedByProvider   Provider?         @relation(fields: [uploadedByProviderId], references: [id])
+  createdAt            DateTime          @default(now())
 }
 
 model LedgerEntry {
@@ -136,4 +205,66 @@ model LedgerEntry {
   amount     Float
   note       String?
   createdAt  DateTime   @default(now())
+}
+
+model CoopGroup {
+  id          String            @id @default(cuid())
+  name        String
+  visibility  GroupVisibility   @default(OPEN)
+  createdAt   DateTime          @default(now())
+  rule        GroupRule?
+  memberships GroupMembership[]
+  invites     GroupInvite[]
+  providers   Provider[]
+}
+
+model GroupRule {
+  id                String    @id @default(cuid())
+  groupId           String    @unique
+  group             CoopGroup @relation(fields: [groupId], references: [id])
+  minReliability    Float?
+  minJobsCompleted  Int?
+  minCpuCores       Int?
+  minRamGb          Int?
+  requiresGpu       Boolean?
+  minAccountAgeDays Int?
+  minAvgJobsPerWeek Float?
+  minUptimePct      Float?
+}
+
+model GroupMembership {
+  id          String           @id @default(cuid())
+  groupId     String
+  group       CoopGroup        @relation(fields: [groupId], references: [id])
+  providerId  String
+  provider    Provider         @relation(fields: [providerId], references: [id])
+  role        GroupRole        @default(MEMBER)
+  status      MembershipStatus @default(ACTIVE)
+  strikeCount Int              @default(0)
+  joinedAt    DateTime         @default(now())
+  endedAt     DateTime?
+}
+
+model GroupInvite {
+  id                  String       @id @default(cuid())
+  groupId             String
+  group               CoopGroup    @relation(fields: [groupId], references: [id])
+  providerId          String
+  provider            Provider     @relation(fields: [providerId], references: [id], name: "InvitedProvider")
+  invitedByProviderId String?
+  status              InviteStatus @default(PENDING)
+  createdAt           DateTime     @default(now())
+  respondedAt         DateTime?
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  message   String
+  groupId   String?
+  inviteId  String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
