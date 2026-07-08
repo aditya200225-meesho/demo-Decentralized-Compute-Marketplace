@@ -56,12 +56,8 @@ async function matchPendingJobs() {
     }
 
     if (allMatched) {
-      await prisma.$transaction([
-        prisma.job.update({ where: { id: job.id }, data: { status: "RUNNING", matchedAt: new Date() } }),
-        prisma.ledgerEntry.create({
-          data: { jobId: job.id, type: "ESCROW_HOLD", amount: job.price, note: "Escrow held pending verified completion" },
-        }),
-      ]);
+      // Credits were already held from the requester's wallet at submission time — just move the job forward.
+      await prisma.job.update({ where: { id: job.id }, data: { status: "RUNNING", matchedAt: new Date() } });
     }
   }
 }
@@ -169,21 +165,33 @@ async function settleCompletedJobs() {
       }
       ops.push(
         prisma.ledgerEntry.create({
-          data: { jobId: job.id, type: "ESCROW_RELEASE", amount: job.price, note: "Escrow released to providers" },
+          data: { userId: job.requesterId, jobId: job.id, type: "ESCROW_RELEASE", amount: job.price, note: "Escrow released to providers" },
         }),
         prisma.job.update({ where: { id: job.id }, data: { status: "PAID", completedAt: new Date() } })
       );
       await prisma.$transaction(ops);
     } else {
-      await prisma.$transaction([
+      const disputeOps: any[] = [
         prisma.ledgerEntry.create({
-          data: { jobId: job.id, type: "ESCROW_REFUND", amount: job.price, note: "Verification mismatch between primary and shadow run" },
+          data: {
+            userId: job.requesterId,
+            jobId: job.id,
+            type: "ESCROW_REFUND",
+            amount: job.price,
+            note: "Verification mismatch between primary and shadow run — credits refunded",
+          },
         }),
         prisma.job.update({
           where: { id: job.id },
           data: { status: "DISPUTED", disputeReason: "Redundant verification hashes did not match", completedAt: new Date() },
         }),
-      ]);
+      ];
+      if (job.requesterId) {
+        disputeOps.push(
+          prisma.user.update({ where: { id: job.requesterId }, data: { creditBalance: { increment: job.price } } })
+        );
+      }
+      await prisma.$transaction(disputeOps);
     }
   }
 }

@@ -16,6 +16,7 @@ export type InviteStatus = "PENDING" | "ACCEPTED" | "DECLINED";
 export interface User {
   id: string;
   username: string;
+  creditBalance?: number;
 }
 
 export interface GroupSummary {
@@ -89,11 +90,17 @@ export interface LedgerEntry {
   id: string;
   providerId: string | null;
   jobId: string | null;
-  type: "ESCROW_HOLD" | "ESCROW_RELEASE" | "ESCROW_REFUND" | "EARNING" | "PAYOUT";
+  type: "ESCROW_HOLD" | "ESCROW_RELEASE" | "ESCROW_REFUND" | "EARNING" | "PAYOUT" | "TOPUP";
   amount: number;
   note: string | null;
   createdAt: string;
   job?: Pick<Job, "id" | "requesterName" | "template"> | null;
+}
+
+export interface WalletInfo {
+  creditBalance: number;
+  ledger: LedgerEntry[];
+  packages: number[];
 }
 
 export interface DashboardStats {

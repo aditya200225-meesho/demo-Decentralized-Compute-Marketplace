@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Dialog,
   DialogTrigger,
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { WalletDialog } from "@/components/WalletDialog";
+import { usePolling } from "@/hooks/usePolling";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { JobTemplate } from "@/lib/types";
@@ -33,16 +35,22 @@ export function SubmitJobDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const wallet = usePolling(useCallback(() => (open ? api.getWallet() : Promise.resolve(null)), [open]), 3000);
+
   const selectedTemplate = templates.find((t) => t.id === templateId);
+  const chunks = Math.max(1, Math.min(8, Number(chunkCount) || 1));
+  const estimatedCost = selectedTemplate ? selectedTemplate.basePrice * chunks : 0;
+  const balance = wallet.data?.creditBalance ?? 0;
+  const insufficientFunds = wallet.data != null && estimatedCost > balance;
 
   async function handleSubmit() {
     if (!requesterName || !templateId) return;
     setSubmitting(true);
     setError(null);
     try {
-      await api.submitJob({ requesterName, templateId, chunkCount: Number(chunkCount) || 1 });
+      await api.submitJob({ requesterName, templateId, chunkCount: chunks });
       setOpen(false);
-      setRequesterName("");
+      setRequesterName(user?.username ?? "");
       onSubmitted();
     } catch (err) {
       setError((err as Error).message);
@@ -107,11 +115,22 @@ export function SubmitJobDialog({
             </p>
           </div>
 
+          <div className="flex items-center justify-between rounded-md border p-3 text-sm">
+            <span>
+              This job costs <span className="font-medium">{estimatedCost.toFixed(2)}</span> credits — you have{" "}
+              <span className="font-medium">{balance.toFixed(2)}</span>
+            </span>
+            {insufficientFunds && <WalletDialog trigger={<Button size="sm">Buy credits</Button>} />}
+          </div>
+
+          {insufficientFunds && (
+            <p className="text-xs text-red-500">Not enough credits to submit this job — buy more above.</p>
+          )}
           {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
 
         <DialogFooter>
-          <Button onClick={handleSubmit} disabled={submitting || !requesterName || !templateId}>
+          <Button onClick={handleSubmit} disabled={submitting || !requesterName || !templateId || insufficientFunds}>
             {submitting ? "Submitting…" : "Submit job"}
           </Button>
         </DialogFooter>

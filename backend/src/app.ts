@@ -8,6 +8,7 @@ import { groupsRouter } from "./routes/groups.ts";
 import { dashboardRouter } from "./routes/dashboard.ts";
 import { authRouter } from "./routes/auth.ts";
 import { storageRouter } from "./routes/storage.ts";
+import { walletRouter } from "./routes/wallet.ts";
 
 export function createApp() {
   const app = express();
@@ -22,6 +23,7 @@ export function createApp() {
   app.use("/api", groupsRouter);
   app.use("/api", dashboardRouter);
   app.use("/api", storageRouter);
+  app.use("/api", walletRouter);
 
   return app;
 }

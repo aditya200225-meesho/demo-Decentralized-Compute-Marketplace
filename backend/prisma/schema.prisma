@@ -38,6 +38,7 @@ enum LedgerType {
   ESCROW_REFUND
   EARNING
   PAYOUT
+  TOPUP
 }
 
 enum GroupVisibility {
@@ -72,11 +73,13 @@ model User {
   id            String         @id @default(cuid())
   username      String         @unique
   passwordHash  String
+  creditBalance Float          @default(0)
   createdAt     DateTime       @default(now())
   providers     Provider[]
   sessions      Session[]
   notifications Notification[]
   jobs          Job[]
+  ledgerEntries LedgerEntry[]
 }
 
 model Session {
@@ -199,6 +202,8 @@ model LedgerEntry {
   id         String     @id @default(cuid())
   providerId String?
   provider   Provider?  @relation(fields: [providerId], references: [id])
+  userId     String?
+  user       User?      @relation(fields: [userId], references: [id])
   jobId      String?
   job        Job?       @relation(fields: [jobId], references: [id])
   type       LedgerType

@@ -40,6 +40,15 @@ jobsRouter.post("/jobs", requireAuth, async (req, res) => {
   if (!template) return res.status(404).json({ error: "template not found" });
 
   const chunks = Math.max(1, Math.min(8, Number(chunkCount) || 1));
+  const price = template.basePrice * chunks;
+
+  const requester = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  if (!requester || requester.creditBalance < price) {
+    return res.status(402).json({
+      error: `insufficient credits — this job costs ${price.toFixed(2)}, you have ${(requester?.creditBalance ?? 0).toFixed(2)}. Buy more credits first.`,
+    });
+  }
+
   const job = await prisma.job.create({
     data: {
       requesterName,
@@ -50,7 +59,7 @@ jobsRouter.post("/jobs", requireAuth, async (req, res) => {
       minRamGb: template.minRamGb,
       requiresGpu: template.requiresGpu,
       privacyMode: template.privacyMode,
-      price: template.basePrice * chunks,
+      price,
       chunkCount: chunks,
       reliabilityMin: Number(reliabilityMin) || 0,
       status: "PENDING",
@@ -60,6 +69,21 @@ jobsRouter.post("/jobs", requireAuth, async (req, res) => {
     },
     include: { chunks: true, template: true },
   });
+
+  // Credits are held for the job (and compute cost) up front — released to providers on
+  // verified completion, refunded to the requester if the redundant verification disputes it.
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: req.user!.id }, data: { creditBalance: { decrement: price } } }),
+    prisma.ledgerEntry.create({
+      data: {
+        userId: req.user!.id,
+        jobId: job.id,
+        type: "ESCROW_HOLD",
+        amount: price,
+        note: `Credits held for ${chunks} chunk${chunks > 1 ? "s" : ""} of compute`,
+      },
+    }),
+  ]);
 
   await uploadInputObject(job);
 

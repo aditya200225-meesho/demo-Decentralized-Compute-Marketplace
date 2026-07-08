@@ -11,6 +11,7 @@ import type {
   Provider,
   StorageObject,
   User,
+  WalletInfo,
 } from "./types";
 import { getToken } from "./authToken";
 
@@ -82,4 +83,8 @@ export const api = {
 
   listStorage: () => request<StorageObject[]>("/storage"),
   storageDownloadUrl: (id: string) => `/api/storage/${id}/download`,
+
+  getWallet: () => request<WalletInfo>("/wallet"),
+  topUpWallet: (amount: number) =>
+    request<{ creditBalance: number }>("/wallet/topup", { method: "POST", body: JSON.stringify({ amount }) }),
 };

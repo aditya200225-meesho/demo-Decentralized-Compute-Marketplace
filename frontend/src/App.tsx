@@ -16,10 +16,11 @@ import { GroupsTab } from "@/components/GroupsTab";
 import { NotificationsTab } from "@/components/NotificationsTab";
 import { StorageTab } from "@/components/StorageTab";
 import { LandingPage } from "@/components/LandingPage";
+import { WalletDialog } from "@/components/WalletDialog";
 import { usePolling } from "@/hooks/usePolling";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Plus, Leaf } from "lucide-react";
+import { Plus, Leaf, Wallet } from "lucide-react";
 
 function App() {
   const { user, logout } = useAuth();
@@ -27,6 +28,7 @@ function App() {
   const providers = usePolling(useCallback(() => api.listProviders(), []), 2000);
   const jobs = usePolling(useCallback(() => api.listJobs(), []), 1500);
   const templates = usePolling(useCallback(() => api.listTemplates(), []), 10000);
+  const wallet = usePolling(useCallback(() => (user ? api.getWallet() : Promise.resolve(null)), [user]), 3000);
 
   const [activeTab, setActiveTab] = useState("providers");
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
@@ -71,6 +73,13 @@ function App() {
             <span className="text-muted-foreground">
               signed in as <span className="font-medium text-foreground">{user.username}</span>
             </span>
+            <WalletDialog
+              trigger={
+                <Button size="sm" variant="outline">
+                  <Wallet className="size-3.5" /> {(wallet.data?.creditBalance ?? 0).toFixed(2)} credits
+                </Button>
+              }
+            />
             <Button size="sm" variant="outline" onClick={logout}>
               Log out
             </Button>
